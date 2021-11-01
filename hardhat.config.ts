@@ -13,9 +13,10 @@ dotenv.config();
 // https://hardhat.org/guides/create-task.html
 task("accounts", "Prints the list of accounts", async (taskArgs, hre) => {
   const accounts = await hre.ethers.getSigners();
+  const { formatEther } = hre.ethers.utils;
 
   for (const account of accounts) {
-    console.log(account.address);
+    console.log(account.address, formatEther(await account.getBalance()));
   }
 });
 
@@ -25,6 +26,11 @@ task("accounts", "Prints the list of accounts", async (taskArgs, hre) => {
 const config: HardhatUserConfig = {
   solidity: "0.8.4",
   networks: {
+    hardhat: {
+      forking: {
+        url: process.env.MAINNET_URL || "",
+      },
+    },
     ropsten: {
       url: process.env.ROPSTEN_URL || "",
       accounts:
