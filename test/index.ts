@@ -12,6 +12,9 @@ async function getQuote(params: any) {
   return response.data;
 }
 
+const ABI_ENDPOINT =
+  "https://api.etherscan.io/api?module=contract&action=getabi&address=";
+
 describe("0xAPI", function () {
   it("Execute swap directly", async function () {
     const sellAmount = ethers.utils.parseEther("1.0");
@@ -21,6 +24,7 @@ describe("0xAPI", function () {
       sellAmount: sellAmount.toString(),
     };
     const quote = await getQuote(params);
+    console.log("Quote: ", quote);
 
     const [taker] = await ethers.getSigners();
     const sdk = getMainnetSdk(taker);
@@ -28,6 +32,20 @@ describe("0xAPI", function () {
       to: quote.to,
       data: quote.data,
     };
+    const implementation =
+      await sdk.zeroEx.exchangeProxy.getFunctionImplementation(
+        quote.data.slice(0, 10)
+      );
+    console.log("Implementation: ", implementation);
+    const abiResponse = await axios.get(ABI_ENDPOINT + implementation);
+    const abi = abiResponse.data.result;
+    const iface = new ethers.utils.Interface(abi);
+    const decodedTransaction = iface.parseTransaction({
+      data: quote.data,
+      value: quote.value,
+    });
+    console.log("Parsed Transaction: ", decodedTransaction);
+
     console.log("Querying weth balance");
     const wethBalanceBefore = await sdk.tokens.weth.balanceOf(taker.address);
     console.log("Weth balance before mint", wethBalanceBefore.toString());
@@ -40,9 +58,7 @@ describe("0xAPI", function () {
 
     console.log("Fill Order");
     const tx = await taker.sendTransaction(transactionRequest);
-    console.log("Transaction", tx);
     const receipt = await tx.wait();
-    console.log("Transaction receipt", receipt);
   });
 
   it("Swap from contract", async function () {
@@ -94,8 +110,7 @@ describe("0xAPI", function () {
     console.info(
       `${"✔".bold} Successfully sold ${
         sellAmount.toString().bold
-      } WETH for DAI!`,
-      receipt
+      } WETH for DAI!`
     );
     // The contract now has `boughtAmount` of DAI!
   });
