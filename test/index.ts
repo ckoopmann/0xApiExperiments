@@ -22,6 +22,7 @@ describe("0xAPI", function () {
       buyToken: "DAI",
       sellToken: "WETH",
       sellAmount: sellAmount.toString(),
+      excludedSources: "Uniswap_V2",
     };
     const quote = await getQuote(params);
     console.log("Quote: ", quote);
