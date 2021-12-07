@@ -5,9 +5,11 @@ import {getQuote, logQuote, obtainAndApproveBuyToken} from "./utils"
 
 describe("0xAPI", function () {
     it("Execute swap directly", async function () {
+        // Choose very large buy amount to force MultiHop
         const buyAmount = ethers.utils.parseEther("100000");
         const sushiTokenAddress = "0x6B3595068778DD592e39A122f4f5a5cF09C90fE2";
         const daiAddress = "0x6b175474e89094c44da98b954eedeac495271d0f";
+        // In case this is set to zero the multihop trade usually fails instead of underbuying
         const slippagePercentage = 0.2;
         const params = {
             buyToken: sushiTokenAddress,
