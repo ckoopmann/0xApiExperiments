@@ -4,6 +4,9 @@ import qs from "qs";
 
 const API_QUOTE_URL = "https://api.0x.org/swap/v1/quote";
 export async function getQuote(params: any) {
+    console.log(
+        "\n\n###################GET QUOTE FROM 0xAPI##################"
+    );
     const url = `${API_QUOTE_URL}?${qs.stringify(params)}`;
     console.log(`Getting quote from ${params.sellToken} to ${params.buyToken}`);
     console.log("Sending quote request to:", url);
@@ -20,15 +23,26 @@ export async function logQuote(quote: any) {
         "Sources:",
         quote.sources.filter((source: any) => source.proportion > "0")
     );
-    await decodeCallData(quote.data, quote.to);
+    try {
+        await decodeCallData(quote.data, quote.to);
+    } catch (e) {
+        console.log("Error decoding call data:", e);
+    }
 }
 
 export async function decodeCallData(callData: string, proxyAddress: string) {
-    const API_KEY = "X28YB9Z9TQD4KSSC6A6QTKHYGPYGIP8D7I";
+    console.log("Decoding call data:", callData, proxyAddress);
+    const API_KEY = "YOUR_ETHERSCAN_API_KEY";
     const ABI_ENDPOINT = `https://api.etherscan.io/api?module=contract&action=getabi&apikey=${API_KEY}&address=`;
     const proxyAbi = await axios
         .get(ABI_ENDPOINT + proxyAddress)
-        .then((response) => JSON.parse(response.data.result));
+        .then((response) => {
+            if(response.data.message == "NOTOK"){
+                console.log("Etherscan response getting abi:", response.data);
+                throw new Error("Etherscan error when getting abi");
+            }
+            return JSON.parse(response.data.result)
+        });
     const proxyContract = await ethers.getContractAt(proxyAbi, proxyAddress);
     await proxyContract.deployed();
     const implementation = await proxyContract.getFunctionImplementation(
@@ -42,6 +56,10 @@ export async function decodeCallData(callData: string, proxyAddress: string) {
         data: callData,
     });
     console.log("Called Function Signature: ", decodedTransaction.signature);
+    console.log(
+        "Args: ",
+        decodedTransaction.args.map((arg: any) => arg.toString())
+    );
 }
 
 export async function obtainAndApproveBuyToken(buyToken: any, userSigner: any) {
@@ -72,11 +90,10 @@ export async function obtainAndApproveBuyToken(buyToken: any, userSigner: any) {
             .connect(inputTokenWhaleSigner)
             .transfer(userSigner.address, whaleTokenBalance);
         console.log(
-            "New user balance",
+            "New DAI balance",
             ethers.utils.formatEther(
                 await buyToken.balanceOf(userSigner.address)
             )
         );
     }
 }
-
